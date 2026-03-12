@@ -1,0 +1,8 @@
+path: ../data/yolo_dataset # absolute or relative to the train file
+train: images/train
+val: images/val
+test: images/test
+
+# Classes
+names:
+  0: pocket
