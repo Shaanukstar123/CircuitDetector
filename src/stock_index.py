@@ -38,7 +38,7 @@ def crop_stock_to_pallet(img, scale=0.25):
                 if cy < h_s * 0.35: top_squares.append(y + h)  
                 if cy > h_s * 0.65: bottom_squares.append(y)   
     
-    print(f"Checkerboard Stats - Left: {len(left_squares)}, Right: {len(right_squares)}")
+    # print(f"Checkerboard detection - Left: {len(left_squares)}, Right: {len(right_squares)}")
     
     # Use median to ignore random noise/labels inside the pallet
     inner_left = int(np.median(left_squares)) if left_squares else 0
