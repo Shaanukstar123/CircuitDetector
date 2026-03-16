@@ -200,7 +200,7 @@ def assign_stock_indices(yolo_centers, pallet_dir, visual=False):
             px, py = int(pt[0]/pt[2]), int(pt[1]/pt[2])
             
             # Extract Patch & Calculate Ratio
-            patch_radius = 3
+            patch_radius = 10
             yellow_ratio = 0.0
             
             if patch_radius <= px < hsv_img.shape[1] - patch_radius and patch_radius <= py < hsv_img.shape[0] - patch_radius:

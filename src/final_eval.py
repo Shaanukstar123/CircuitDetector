@@ -11,7 +11,7 @@ from generate_data import get_exact_pallet_roi
 from detector import get_global_predictions
 from stock_index import assign_stock_indices
 
-def evaluate_strict_predictions(final_predictions, csv_path, tolerance=0.0085):
+def evaluate_final_predictions(final_predictions, csv_path, tolerance=0.0085):
     """
     Evaluates predictions and returns raw metric counts for aggregation.
     """
@@ -58,6 +58,8 @@ def process_single_pallet(pallet_dir, model_path, results_csv_dir):
 
     # Pallet image crop
     cropped_img, crop_bbox, M = get_exact_pallet_roi(str(test_img), str(metadata_path))
+    # h, w = cropped_img.shape[:2]
+    # print(f"Smallest component width in pixels: {0.017 * w}")
     x_min, y_min, _, _ = crop_bbox
 
     temp_crop_path = "temp_crop_eval.jpg"
@@ -108,7 +110,7 @@ def process_single_pallet(pallet_dir, model_path, results_csv_dir):
         output_csv = results_csv_dir / f"{pallet_path.name}.csv"
         df_out.to_csv(output_csv, header=False, index=False)
 
-    metrics = evaluate_strict_predictions(final_predictions, gt_csv_path)
+    metrics = evaluate_final_predictions(final_predictions, gt_csv_path)
     return metrics, final_predictions
 
 def plot_tolerance_sweep(all_predictions_dict, all_gt_paths, output_dir):
@@ -123,7 +125,7 @@ def plot_tolerance_sweep(all_predictions_dict, all_gt_paths, output_dir):
         tot_pred, tot_gt, tot_strict = 0, 0, 0
         
         for pallet_name, preds in all_predictions_dict.items():
-            metrics = evaluate_strict_predictions(preds, all_gt_paths[pallet_name], tolerance=tol)
+            metrics = evaluate_final_predictions(preds, all_gt_paths[pallet_name], tolerance=tol)
             tot_pred += metrics['pred']
             tot_gt += metrics['gt']
             tot_strict += metrics['strict']
@@ -145,7 +147,7 @@ def plot_tolerance_sweep(all_predictions_dict, all_gt_paths, output_dir):
     
     plt.title("Pipeline Robustness: F1-Score vs. Spatial Tolerance")
     plt.xlabel("Spatial Tolerance (Canonical Coordinate Distance)")
-    plt.ylabel("Dataset Strict F1-Score")
+    plt.ylabel("Dataset F1-Score")
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
     
@@ -214,8 +216,8 @@ def evaluate_dataset(dataset_dir, model_path, results_dir="../results"):
     print("="*40)
     print(f"Total Ground Truth: {totals['gt']}")
     print(f"Total Predicted:    {totals['pred']}")
-    print(f"Total Spatial OK:   {totals['spatial']}")
-    print(f"Total Strict OK:    {totals['strict']}")
+    print(f"Total Spatial:   {totals['spatial']}")
+    print(f"Total Strict (Location + Time):    {totals['strict']}")
     print("-" * 40)
     print(f"Global Precision:   {precision:.4f}")
     print(f"Global Recall:      {recall:.4f}")
@@ -230,7 +232,7 @@ def evaluate_dataset(dataset_dir, model_path, results_dir="../results"):
     metrics_vals = [precision, recall, f1_score]
     bars = ax1.bar(metrics_names, metrics_vals, color=['#4C72B0', '#55A868', '#C44E52'])
     ax1.set_ylim(0, 1.1)
-    ax1.set_title("Overall Pipeline Performance (Strict)")
+    ax1.set_title("Overall Pipeline Performance")
     ax1.set_ylabel("Score")
     for bar in bars:
         yval = bar.get_height()
@@ -241,9 +243,10 @@ def evaluate_dataset(dataset_dir, model_path, results_dir="../results"):
     scores = list(results_per_pallet.values())
     ax2.bar(names, scores, color='gray')
     ax2.set_ylim(0, 1.1)
-    ax2.set_title("Strict F1-Score per Pallet")
+    ax2.set_title("F1-Score per Pallet")
     ax2.set_ylabel("F1-Score")
-    ax2.tick_params(axis='x', rotation=45)
+    ax2.set_xticks(range(len(names)))
+    ax2.set_xticklabels(names, rotation=45, ha='right', rotation_mode='anchor')
     
     plt.tight_layout()
     eval_plot_path = results_path / "evaluation_results.png"

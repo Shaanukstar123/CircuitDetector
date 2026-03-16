@@ -48,7 +48,7 @@ def evaluate_strict_predictions(final_predictions, csv_path, tolerance=0.0085):
     recall = strict_matches / len(gt_points) if len(gt_points) > 0 else 0
     f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
 
-    print(f"\n--- FINAL STRICT EVALUATION ---")
+    print(f"\n--- FINAL EVALUATION ---")
     print(f"Ground Truth Pockets: {len(gt_points)}")
     print(f"Predicted Pockets:    {len(pred_points)}")
     print(f"----------------------------------")

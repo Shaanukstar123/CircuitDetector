@@ -1,2 +1,5 @@
 .venv
 data
+best_model
+old_data
+old_code
