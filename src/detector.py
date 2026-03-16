@@ -9,8 +9,6 @@ from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 from pathlib import Path
 
-from generate_data import get_exact_pallet_roi
-
 def get_global_predictions(image_input, model, patch_size=2048, overlap=0.2, conf_thresh=0.5, iou_thresh=0.4):
     """
     image_input: Can be a file path (str) OR a numpy image array (np.ndarray).
