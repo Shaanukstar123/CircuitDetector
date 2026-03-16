@@ -57,13 +57,13 @@ To rigorously evaluate the pipeline, I implemented a strict scoring system using
 
 ![Final Results on full dataset](results/evaluation_results_final.png)
 
-For the baseline evaluation, I set the canonical spatial **tolerance to `0.0085**`. This value was intentionally chosen as it represents exactly half the physical width of the smallest component on the pallet, guaranteeing that no single prediction could accidentally bridge two adjacent pockets. 
+For the baseline evaluation, I set the canonical spatial **tolerance to `0.0085**`. This value was intentionally chosen as it represents exactly half the length between the centres of the smallest component type from the dataset - `pallet_24771` (calculated using ground truth coordinate difference). This guarantees that no single prediction could accidentally bridge two adjacent pockets.
 
 To prove the pipeline's robustness, I ran a spatial tolerance sweep:
 
 ![Tolerance Sweep](results/tolerance_sweep.png)
 
-As shown in the graph above, the pipeline maintains peak F1-score performance even when the spatial tolerance is restricted down to **`0.005`**. So we can conclude that the tolerance can be lowered up to this limit without large reduction in performance.
+As shown in the graph above, the pipeline maintains peak F1-score performance even when the spatial tolerance is restricted down to **`0.0050`**. So we can conclude that the tolerance can be lowered up to this limit without large reduction in performance.
 
 ---
 
