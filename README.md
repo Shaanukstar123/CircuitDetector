@@ -1,7 +1,7 @@
 # CircuitDetector
 A Proof-of-Concept (PoC) pipeline for automating the markup of electronic assembly pallets. This system processes a sequence of chronological stock images and a final high-resolution capture to accurately predict the canonical `(x, y)` locations of components and the exact `stock_index` frame when they were placed.
 
-## 🚀 How to Run
+## How to Run
 
 Navigate to the `CircuitDetector/src/` directory to run the scripts.
 
@@ -27,7 +27,7 @@ python final_eval.py
 
 ---
 
-## 🏗️ Architecture & Pipeline Overview
+## Architecture & Pipeline Overview
 
 Given the ~6-hour timebox for this PoC, I designed a hybrid pipeline that utilises Machine Learning for complex spatial reasoning and Classical Computer Vision for fast temporal association.
 
@@ -51,7 +51,7 @@ The final predicted pixel coordinates are multiplied by the inverse of the provi
 
 ---
 
-## 📊 Evaluation Methodology & Tolerance Sweep
+## Evaluation Methodology & Tolerance Sweep
 
 To rigorously evaluate the pipeline, I implemented a strict scoring system using the Hungarian matching algorithm.
 
@@ -67,7 +67,7 @@ As shown in the graph above, the pipeline maintains peak F1-score performance ev
 
 ---
 
-## 🔬 Design Decisions & Engineering Trade-offs
+## Design Decisions & Engineering Trade-offs
 
 During development, several approaches were tested and discarded to optimise for the time constraint:
 
@@ -87,7 +87,7 @@ Ultimately, projecting perfect high-resolution coordinates down to the stock ima
 
 ---
 
-## ⚠️ Known Limitations & The Production Path
+## ⚠️ Known Limitations & Production implementation
 
 While the hybrid pipeline achieves excellent baseline metrics, it exposes the exact limitations of classical computer vision.
 
@@ -98,4 +98,8 @@ The pipeline demonstrated exceptional accuracy across the vast majority of the d
 
 The AKAZE + Homography alignment proved exceptionally robust for handling perspective distortion and serves as a highly reliable geometric backbone. However, to eliminate manual threshold tuning in a production environment, the *state detection* phase must be upgraded:
 
-**Structural Change Detection:** Replacing the brittle HSV colour check for a lightweight image comparison model (like a Siamese network). Instead of hardcoding colour thresholds that break when a similar coloured part sits on a yellow background, the network would look at the sequence of pocket crops and detect actual physical changes—like new edges, metal pins, or shadows. This makes the system immune to lighting shifts, transparent plastics, and colour-matched components.
+**Structural Change Detection: Replacing the brittle HSV colour check for a lightweight image comparison model (like a Siamese network). Instead of hardcoding colour thresholds that break when a similar coloured part sits on a yellow background, the network would look at the sequence of pocket crops and detect actual physical changes—like new edges, metal pins, or shadows. This makes the system immune to lighting shifts, transparent plastics, and colour-matched components.
+
+**Speed:**
+
+Currently, the end-to-end inference time (ROI extraction, YOLO spatial detection, AKAZE homography across all stock frames, and temporal assignment) runs at approximately **5 seconds per pallet sequence**. Given that this system is designed to replace a manual, UI-driven click-and-annotate process, I did't focus on collecting much data on inference speed and further performance optimisations although there definitely is potential for improvement.
