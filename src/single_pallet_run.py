@@ -80,7 +80,7 @@ def run_full_pipeline(pallet_dir, model_path, results_csv_dir="../results/result
 
     # YOLO Spatial Inference (Returns coordinates relative to cropped image)
     print("--- PHASE 2: Spatial Detection ---")
-    yolo_centers = get_global_predictions(temp_crop_path, model_path, conf_thresh=0.75)
+    yolo_centers = get_global_predictions(temp_crop_path, model_path, conf_thresh=0.76)
     
     # Assign time indices using the stock images
     print("--- PHASE 3: Temporal Association ---")

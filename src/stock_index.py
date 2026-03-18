@@ -177,6 +177,7 @@ def assign_stock_indices(yolo_centers, pallet_dir, visual=False):
     upper_yellow = np.array([30, 255, 255])
 
     histories_yellow = {i: [] for i in range(len(yolo_centers))}
+    yellow_max_ratio = 0.15 # If more than 15% yellow, it's considered empty (no component)
 
     for sf in stock_files:
         img = cv2.imread(str(sf))
@@ -215,7 +216,7 @@ def assign_stock_indices(yolo_centers, pallet_dir, visual=False):
                 cv2.line(vis_img, (px-10, py), (px+10, py), (0, 0, 255), 2)
                 cv2.line(vis_img, (px, py-10), (px, py+10), (0, 0, 255), 2)
                 
-                if yellow_ratio < 0.15:
+                if yellow_ratio < yellow_max_ratio:
                     # Component is Present (Yellow covered) -> Draw Green Circle
                     cv2.circle(vis_img, (px, py), 15, (0, 255, 0), 2)
                 else:
@@ -237,7 +238,7 @@ def assign_stock_indices(yolo_centers, pallet_dir, visual=False):
         stock_idx = len(stock_files) - 1 
         
         for idx, y_ratio in enumerate(y_hist):
-            if y_ratio < 0.15: 
+            if y_ratio < yellow_max_ratio: 
                 stock_idx = idx
                 break
                 

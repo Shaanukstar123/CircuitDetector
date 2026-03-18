@@ -48,8 +48,8 @@ def get_global_predictions(image_input, model, patch_size=2048, overlap=0.2, con
                 
             patch = img[y_start:y_end, x_start:x_end]
             
-            # Run YOLO on the patch (imgsz=800 matches training)
-            results = model.predict(patch, imgsz=800, conf=conf_thresh, verbose=False)
+            # Run YOLO on the patch (imgsz should match training)
+            results = model.predict(patch, imgsz=1024, conf=conf_thresh, verbose=False)
             
             # 2. Coordinate Shifting
             boxes = results[0].boxes

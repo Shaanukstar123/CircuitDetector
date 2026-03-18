@@ -66,7 +66,7 @@ def process_single_pallet(pallet_dir, model_path, results_csv_dir):
     cv2.imwrite(temp_crop_path, cropped_img)
 
     # Component detection using YOLO
-    yolo_centers = get_global_predictions(temp_crop_path, model_path, conf_thresh=0.75)
+    yolo_centers = get_global_predictions(temp_crop_path, model_path, conf_thresh=0.76)
     
     # Time index assignment using stock images
     temporal_results = assign_stock_indices(yolo_centers, pallet_dir=pallet_path)
