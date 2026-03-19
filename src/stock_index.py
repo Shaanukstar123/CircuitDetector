@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-from detector import get_global_predictions
-from ultralytics import YOLO
 from generate_data import get_exact_pallet_roi
 from pathlib import Path
 
@@ -30,7 +28,7 @@ def crop_stock_to_pallet(img, scale=0.25):
             extent = area / float(w * h)
             aspect_ratio = w / float(h)
             # Ignore circular blobs and focus on square-like contours - checkerboard holes
-            if 0.7 < aspect_ratio < 1.3 and extent > 0.8:
+            if 0.8 < aspect_ratio < 1.3 and extent > 0.8:
                 cx, cy = x + w/2, y + h/2
                 # Wider buckets (35%) to ensure we catch squares even if shifted
                 if cx < w_s * 0.35: left_squares.append(x + w) 
@@ -57,7 +55,7 @@ def crop_stock_to_pallet(img, scale=0.25):
     
     return img[full_y:full_b, full_x:full_r], full_x, full_y
 
-def get_master_homography(last_stock_img, cropped_capture_img):
+def get_master_homography(last_stock_img, cropped_capture_img, visual=False):
     """
     Maps pallet image pixels to stock image pixels with precise resolution scaling.
     """
@@ -79,6 +77,20 @@ def get_master_homography(last_stock_img, cropped_capture_img):
     
     matches = cv2.BFMatcher(cv2.NORM_HAMMING).knnMatch(des2, des1, k=2) # Pallet -> Stock
     good = [m for m, n in matches if m.distance < 0.7 * n.distance]
+
+    # Visualiser
+    if visual:
+        match_img = cv2.drawMatches(
+            small_cap, kp2, small_stock, kp1, good, None, 
+            flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+        )
+        h_m, w_m = match_img.shape[:2]
+        s_m = 1600 / w_m if w_m > 1600 else 1.0
+        
+        window_name = "ACTUAL AKAZE Matches (Press Key)"
+        cv2.imshow(window_name, cv2.resize(match_img, (0, 0), fx=s_m, fy=s_m))
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     
     src_pts = np.float32([kp2[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
     dst_pts = np.float32([kp1[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
@@ -201,7 +213,7 @@ def assign_stock_indices(yolo_centers, pallet_dir, visual=False):
             px, py = int(pt[0]/pt[2]), int(pt[1]/pt[2])
             
             # Extract Patch & Calculate Ratio
-            patch_radius = 10
+            patch_radius = 7
             yellow_ratio = 0.0
             
             if patch_radius <= px < hsv_img.shape[1] - patch_radius and patch_radius <= py < hsv_img.shape[0] - patch_radius:
@@ -231,14 +243,23 @@ def assign_stock_indices(yolo_centers, pallet_dir, visual=False):
     if visual:
         cv2.destroyAllWindows()
 
-    # Find the exact moment the Yellow disappears
     final_results = []
+    
+    # The 'Debounce' parameter: Number pf consecutive frames must be below the threshold before confirming placement
+    consecutive_frames_required = 2
+
     for i, center in enumerate(yolo_centers):
         y_hist = np.array(histories_yellow[i])
         stock_idx = len(stock_files) - 1 
         
-        for idx, y_ratio in enumerate(y_hist):
-            if y_ratio < yellow_max_ratio: 
+        # Standard Left-to-Right chronological search
+        for idx in range(len(y_hist)):
+            
+            # Slice a "look-ahead" window from the current frame
+            window = y_hist[idx : idx + consecutive_frames_required]
+            
+            # If all frames in this window are below the yellow threshold, it's a true placement
+            if np.all(window < yellow_max_ratio):
                 stock_idx = idx
                 break
                 

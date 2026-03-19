@@ -91,15 +91,36 @@ Ultimately, projecting perfect high-resolution coordinates down to the stock ima
 
 While the hybrid pipeline achieves excellent baseline metrics, it exposes the exact limitations of classical computer vision.
 
-### Performance Variance & Edge Cases
-The pipeline demonstrated exceptional accuracy across the vast majority of the dataset, sometimes even achieving perfect **1.0 F1-scores** on pallets containing high-contrast parts (e.g., large square black microchips). However, performance dropped significantly on two specific edge cases, most notably `pallet_24774`, which yielded an F1-score of 0.24. This degradation was directly caused by components that shared an almost identical hue to the yellow pallet background, in addition to the transparent placeholders and tiny, varied parts. In these specific instances, the classical HSV colour probe could not reliably distinguish between the empty yellow adhesive and the component itself. This stark contrast in performance perfectly highlights the primary limitation of static colour-space masking and strongly justifies the necessity of migrating to a learned structural model for production.
+Performance Variance & Edge Cases
+The pipeline demonstrated high accuracy across the vast majority of the dataset, achieving close to and sometimes perfect 1.0 F1-scores on a diverse set of components. However, performance dropped on 2 specific edge cases.
 
-**Migrating to a Learned System:**
+**`pallet_24773`**: This is was our worst performer at a 57% F1-score. The failure was not due to component detection, but rather the geometric anchoring. In this specific pallet, the tracking barcode sticker was applied to the opposite side of the frame compared to our reference capture image. Because the AKAZE algorithm aggressively anchors to high-contrast features, it anchored to the misplaced sticker, resulting in a mathematically valid but physically impossible Homography matrix that skewed the temporal projections.
 
-The AKAZE + Homography alignment proved exceptionally robust for handling perspective distortion and serves as a highly reliable geometric backbone. However, to eliminate manual threshold tuning in a production environment, the *state detection* phase must be upgraded:
+![pallet_24773 - Feature matching for Homography Sweep with stickers on the wrong side](results/outlier_homography.png)
 
-**Structural Change Detection: Replacing the brittle HSV colour check for a lightweight image comparison model (like a Siamese network). Instead of hardcoding colour thresholds that break when a similar coloured part sits on a yellow background, the network would look at the sequence of pocket crops and detect actual physical changes—like new edges, metal pins, or shadows. This makes the system immune to lighting shifts, transparent plastics, and colour-matched components.
 
-**Speed:**
+**`pallet_24774`:** This pallet originally suffered from severe temporal noise. However, after implementing Signal Debouncing - a sliding look-ahead window that requires the yellow tape to be occluded for three consecutive frames before registering a state change, we successfully filtered out high-frequency noise like passing hands and single-frame matrix glitches. This boosted the recall to 60%. The remaining missed detections are due to transparent components blending into the yellow background, proving the limit of static HSV colour probing.
+
+While the current AKAZE + Homography alignment serves as a reliable geometric backbone for most pallets, preparing this system for a production factory floor requires moving away from brittle heuristics.
+
+#### Robust Geometric Alignment (Fixing the Barcode Edge Case)
+The failure on pallet_2773 happened because AKAZE and standard RANSAC are completely blind to global context. They saw a perfect barcode on the left of the capture image, and a perfect barcode on the right of the stock image, and forcefully aligned them together. To fix this, we need an alignment approach that is immune to massive localised outliers.
+
+A simple improvement would be to introduce a Static Pre-processing Mask that blacks out the center of the pallet and the known variable label zones. By passing this binary mask into AKAZE, we force the algorithm to completely ignore human-placed stickers and changing components. 
+
+Alternatively, for a more permanent fix, we could replace AKAZE with a modern, context-aware Deep Learning feature matcher like LoFTR (Local Feature Network). LoFTR understands global spatial relationships, meaning it would instantly recognize that a barcode on the left doesn't physically belong to a barcode on the right, keeping the alignment strictly locked onto the actual grid of the pallet.
+
+#### Automated Training Data Pipeline
+Currently, the occasional homography shifts in this PoC would result in mislabeled data. However, once the geometric alignment is perfected, this deterministic pipeline gains a massive secondary use-case: generating training data.
+
+As far as I am aware, the stock images and their component coordinates are not labelled unlike the pallet images. We can leverage this system to do it automatically. By taking the pallet image coordinates and mathematically projecting them backward through the chronological stock frames, we can automatically extract perfectly cropped datasets of "Empty" vs. "Filled" pockets.
+This will be useful for training a model to detect empty pockets as explained below.
+
+#### Deep Learning Classification (Replacing the HSV Probe)
+The transparency issues on pallets like 24774 show the practical limits of relying on static color thresholds in a physical environment. However, because our homography pipeline can be used to automatically crop thousands of "empty" and "filled" pockets, we already have the perfect dataset to train a more resilient solution without over-engineering a complex temporal tracking system.
+
+I recommend replacing the HSV check with a straightforward, lightweight image classifier (such as MobileNetV3 or a YOLO classification model). Instead of relying on hardcoded color values, a standard CNN will easily learn to spot the actual physical signs of a placed component—like the edges, cast shadows, and reflections created by transparent plastics—that a color filter simply cannot see. This gives us a highly reliable architecture that ignores factory lighting shifts and color-matched parts, while still being small enough to run in milliseconds on edge hardware.
+
+#### Speed
 
 Currently, the end-to-end inference time (ROI extraction, YOLO spatial detection, AKAZE homography across all stock frames, and temporal assignment) runs at approximately **5 seconds per pallet sequence**. Given that this system is designed to replace a manual, UI-driven click-and-annotate process, I did't focus on collecting much data on inference speed and further performance optimisations although there definitely is potential for improvement.
